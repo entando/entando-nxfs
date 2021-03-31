@@ -68,7 +68,7 @@ func (c *DefaultApiController) ApiNxfsBrowseEncodedPathGet(w http.ResponseWriter
 	params := mux.Vars(r)
 	query := r.URL.Query()
 	encodedPath := params["EncodedPath"]
-	maxdepth := query.Get("maxdepth")
+	maxdepth, err := parseInt32Parameter(query.Get("maxdepth"))
 	result, err := c.service.ApiNxfsBrowseEncodedPathGet(r.Context(), encodedPath, maxdepth)
 	//If an error occured, encode the error with the status code
 	if err != nil {

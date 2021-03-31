@@ -12,8 +12,17 @@ package nxsiteman
 import (
 	"context"
 	"errors"
+	"fmt"
+	pkgErr "github.com/pkg/errors"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
 )
+
+const fsBaseDir = "browsableFS"
 
 // DefaultApiService is a service that implents the logic for the DefaultApiServicer
 // This service should implement the business logic for every endpoint for the DefaultApi API.
@@ -27,17 +36,32 @@ func NewDefaultApiService() DefaultApiServicer {
 }
 
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
-func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth string) (ImplResponse, error) {
-	// TODO - update ApiNxfsBrowseEncodedPathGet with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (ImplResponse, error) {
 
-	//TODO: Uncomment the next line to return response Response(200, FlatDirectoryTree{}) or use other options such as http.Ok ...
-	//return Response(200, FlatDirectoryTree{}), nil
+	var fileInfoToBrowse os.FileInfo
+	var err error
 
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
+	// define paths
+	decodedPath, err := url.PathUnescape(encodedPath)
+	if nil != err {
+		return ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error()), nil
+	}
+	fullPathToBrowse := filepath.Join(fsBaseDir, decodedPath)
 
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsBrowseEncodedPathGet method not implemented")
+	// does path exist?
+	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {
+		return ErrorResponse(http.StatusNotFound, "path_not_found", err.Error()), nil
+	}
+	// extract fileInfoToBrowse path
+	pathToBrowse := path.Dir(fullPathToBrowse)
+
+	// recursive function
+	dirObjectArray, err := browseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []DirectoryObject{})
+	if nil != err {
+		return ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
+	}
+
+	return Response(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
 }
 
 // ApiNxfsObjectsEncodedPathDelete - Deletes an object
@@ -94,4 +118,38 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 	//return Response(0, Error{}), nil
 
 	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathPut method not implemented")
+}
+
+// browseFileTree - traverse recursively the path represented by fileInfo
+func browseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth int32, directoryObjects []DirectoryObject) ([]DirectoryObject, error) {
+
+	// if depth reached return
+	if currDepth > maxDepth && maxDepth != 0 {
+		return directoryObjects, nil
+	}
+
+	// if the current one is a file add it to the result list and return
+	if !fileInfo.IsDir() {
+		directoryObjects = append(directoryObjects, toDirectoryObject(path, fileInfo))
+		return directoryObjects, nil
+	}
+
+	// otherwise proceed with the tree traversion
+	dirAbsPath := filepath.Join(path, fileInfo.Name())
+
+	// read dir
+	readFilesInfo, err := ioutil.ReadDir(dirAbsPath)
+	if nil != err {
+		return directoryObjects, pkgErr.Wrap(err, fmt.Sprintf("can't read directory %s", dirAbsPath))
+	}
+
+	// call recursively
+	for _, file := range readFilesInfo {
+		directoryObjects, err = browseFileTree(dirAbsPath, file, currDepth+1, maxDepth, directoryObjects)
+		if nil != err {
+			return directoryObjects, err
+		}
+	}
+
+	return directoryObjects, nil
 }

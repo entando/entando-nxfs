@@ -12,9 +12,11 @@ package nxsiteman
 type DirectoryObject struct {
 	Id int64 `json:"id"`
 
+	Name string `json:"name"`
+
 	Path string `json:"path,omitempty"`
 
-	Size int32 `json:"size,omitempty"`
+	Size int64 `json:"size,omitempty"`
 
 	Type ObjectType `json:"type,omitempty"`
 
