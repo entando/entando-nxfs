@@ -13,3 +13,8 @@ package nxsiteman
 func Response(code int, body interface{}) ImplResponse {
 	return ImplResponse{Code: code, Body: body}
 }
+
+//ErrorResponse return a ImplResponse struct filled with an error
+func ErrorResponse(code int, errorCode string, errorMessage string) ImplResponse {
+	return ImplResponse{Code: code, Body: &Error{Code: errorCode, Message: errorMessage}}
+}

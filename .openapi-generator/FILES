@@ -1,0 +1,17 @@
+Dockerfile
+README.md
+api/openapi.yaml
+go.mod
+main.go
+server/api.go
+server/api_default.go
+server/api_default_service.go
+server/helpers.go
+server/impl.go
+server/logger.go
+server/model_action_log.go
+server/model_directory_object.go
+server/model_error.go
+server/model_flat_directory_tree.go
+server/model_object_type.go
+server/routers.go

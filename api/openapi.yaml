@@ -24,7 +24,7 @@ paths:
         name: maxdepth
         required: false
         schema:
-          type: string
+          type: integer
         style: form
       responses:
         "200":
@@ -163,6 +163,7 @@ components:
           _created:
             at: 2000-01-23T04:56:07.000+00:00
             by: by
+          name: name
           _updated:
             at: 2000-01-23T04:56:07.000+00:00
             by: by
@@ -172,6 +173,7 @@ components:
           _created:
             at: 2000-01-23T04:56:07.000+00:00
             by: by
+          name: name
           _updated:
             at: 2000-01-23T04:56:07.000+00:00
             by: by
@@ -190,6 +192,7 @@ components:
         _created:
           at: 2000-01-23T04:56:07.000+00:00
           by: by
+        name: name
         _updated:
           at: 2000-01-23T04:56:07.000+00:00
           by: by
@@ -198,9 +201,12 @@ components:
         id:
           format: int64
           type: integer
+        name:
+          type: string
         path:
           type: string
         size:
+          format: int64
           type: integer
         type:
           $ref: '#/components/schemas/ObjectType'
