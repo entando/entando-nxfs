@@ -1,249 +1,209 @@
 openapi: 3.0.0
+
+#######################################################################################################################################################
 info:
-  description: Simple file access APIs for the Entando Nx subsystem
-  title: NxFs
   version: 0.0.1
+  title: NxFs
+  description: Simple file access APIs for the Entando Nx subsystem
+
+#######################################################################################################################################################
 servers:
-- url: http://localhost:3000
+  - url: 'http://localhost:3000'
+
+#######################################################################################################################################################
 paths:
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/browse/{EncodedPath}:
+    summary: 'Directory Browsing'
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     get:
+      summary: 'Gets the list of objects in a directory'
       parameters:
-      - description: the urlencoded path of the directory object
-        explode: false
-        in: path
-        name: EncodedPath
-        required: true
-        schema:
-          type: string
-        style: simple
-      - description: value that indicates the max nesting level of the directories
-          reported back in the result (0=no limit)
-        explode: true
-        in: query
-        name: maxdepth
-        required: false
-        schema:
-          type: integer
-        style: form
+        - $ref: "#/components/parameters/EncodedPath"
+        - in: query
+          name: maxdepth
+          description: value that indicates the max nesting level of the directories reported back in the result (0=no limit)
+          required: false
+          schema:
+            type: integer
       responses:
-        "200":
+        '200':
+          description: 'Flat Directory Tree'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FlatDirectoryTree'
-          description: Flat Directory Tree
+                type: object
+                $ref: "#/components/schemas/FlatDirectoryTree"
         default:
+          description: Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Error
-      summary: Gets the list of objects in a directory
-    summary: Directory Browsing
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/objects/{EncodedPath}:
-    delete:
-      parameters:
-      - description: the urlencoded path of the directory object
-        explode: false
-        in: path
-        name: EncodedPath
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        "204":
-          description: No Content
-        default:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-          description: Error
-      summary: Deletes an object
+    summary: 'Directory Objects'
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     get:
+      summary: 'Gets an object'
       parameters:
-      - description: the urlencoded path of the directory object
-        explode: false
-        in: path
-        name: EncodedPath
-        required: true
-        schema:
-          type: string
-        style: simple
+        - $ref: "#/components/parameters/EncodedPath"
       responses:
-        "200":
+        '200':
+          description: 'Directory Object'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DirectoryObject'
-          description: Directory Object
+                $ref: "#/components/schemas/DirectoryObject"
         default:
+          description: Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Error
-      summary: Gets an object
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     put:
+      summary: 'Creates or updates an object'
       parameters:
-      - description: the urlencoded path of the directory object
-        explode: false
-        in: path
-        name: EncodedPath
-        required: true
-        schema:
-          type: string
-        style: simple
+        - $ref: "#/components/parameters/EncodedPath"
       requestBody:
+        description: The object to create or update
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/DirectoryObject'
-        description: The object to create or update
-        required: true
       responses:
-        "200":
+        '200':
+          description: 'Directory Object'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DirectoryObject'
-          description: Directory Object
+                $ref: "#/components/schemas/DirectoryObject"
         default:
+          description: Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    delete:
+      summary: 'Deletes an object'
+      parameters:
+        - $ref: "#/components/parameters/EncodedPath"
+      responses:
+        '204':
+          description: 'No Content'
+        default:
           description: Error
-      summary: Creates or updates an object
-    summary: Directory Objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/objects/{EncodedPath}/publish:
     post:
+      summary: 'Publishes an object'
       parameters:
-      - description: the urlencoded path of the directory object
-        explode: false
-        in: path
-        name: EncodedPath
-        required: true
-        schema:
-          type: string
-        style: simple
+        - $ref: "#/components/parameters/EncodedPath"
       responses:
-        "200":
+        '200':
+          description: 'Directory Object'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DirectoryObject'
-          description: Directory Object
+                $ref: "#/components/schemas/DirectoryObject"
         default:
+          description: Error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Error
-      summary: Publishes an object
+#######################################################################################################################################################
 components:
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   parameters:
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     EncodedPath:
-      description: the urlencoded path of the directory object
-      explode: false
-      in: path
       name: EncodedPath
+      in: path
+      description: the urlencoded path of the directory object
       required: true
       schema:
         type: string
-      style: simple
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   schemas:
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     FlatDirectoryTree:
-      example:
-        list:
-        - path: path
-          size: 6
-          _created:
-            at: 2000-01-23T04:56:07.000+00:00
-            by: by
-          name: name
-          _updated:
-            at: 2000-01-23T04:56:07.000+00:00
-            by: by
-          id: 0
-        - path: path
-          size: 6
-          _created:
-            at: 2000-01-23T04:56:07.000+00:00
-            by: by
-          name: name
-          _updated:
-            at: 2000-01-23T04:56:07.000+00:00
-            by: by
-          id: 0
+      required:
+        - list
       properties:
         list:
+          type: array
           items:
             $ref: '#/components/schemas/DirectoryObject'
-          type: array
-      required:
-      - list
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     DirectoryObject:
-      example:
-        path: path
-        size: 6
-        _created:
-          at: 2000-01-23T04:56:07.000+00:00
-          by: by
-        name: name
-        _updated:
-          at: 2000-01-23T04:56:07.000+00:00
-          by: by
-        id: 0
+      required:
+        - id
+        - name
       properties:
         id:
-          format: int64
           type: integer
+          format: int64
         name:
           type: string
         path:
           type: string
         size:
-          format: int64
           type: integer
+          format: int64
         type:
+          description: "The type of object"
           $ref: '#/components/schemas/ObjectType'
         _created:
+          description: "Matadata: creation information"
           $ref: '#/components/schemas/ActionLog'
         _updated:
+          description: "Matadata: update information"
           $ref: '#/components/schemas/ActionLog'
-      required:
-      - id
-      - name
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ActionLog:
-      example:
-        at: 2000-01-23T04:56:07.000+00:00
-        by: by
+      type: object
+      required:
+        - at
       properties:
         at:
-          format: date-time
           type: string
+          format: date-time
         by:
           type: string
-      required:
-      - at
-      type: object
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     ObjectType:
-      description: |
-        Type of object: - d: directory - f: file
-      enum:
-      - d
-      - f
+      description: >
+        Type of object:
+        - d: directory
+        - f: file
       type: string
+      enum: [d, f]
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     Error:
+      type: object
+      required:
+        - code
+        - message
       properties:
         code:
           type: string
         message:
           type: string
-      required:
-      - code
-      - message
-      type: object
+        #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    FileContent:
+      allOf:     # Combines the BasicErrorModel and the inline model
+        - $ref: '#/components/schemas/DirectoryObject'
+        - type: object
+          required:
+            - content
+          properties:
+            content:
+              type: string
