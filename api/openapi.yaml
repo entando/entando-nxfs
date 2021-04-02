@@ -72,7 +72,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DirectoryObject'
+              $ref: '#/components/schemas/FileObject'
       responses:
         '200':
           description: 'Directory Object'
@@ -198,7 +198,7 @@ components:
         message:
           type: string
         #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    FileContent:
+    FileObject:
       allOf:     # Combines the BasicErrorModel and the inline model
         - $ref: '#/components/schemas/DirectoryObject'
         - type: object

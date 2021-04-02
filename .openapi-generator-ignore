@@ -25,3 +25,4 @@
 server/helpers.go
 server/model_file_content.go
 Dockerfile
+README.md
