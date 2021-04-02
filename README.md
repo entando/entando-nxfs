@@ -13,7 +13,7 @@ To see how to make this your own, look here:
 [README](https://openapi-generator.tech)
 
 - API version: 0.0.1
-- Build date: 2021-04-01T12:32:12.822Z[GMT]
+- Build date: 2021-04-02T10:01:56.967Z[GMT]
 
 
 ### Running the server
@@ -24,15 +24,13 @@ go run main.go
 ```
 
 To run the server in a docker container
-
 ```
-docker-compose up
+docker build --network=host -t nxsiteman .
 ```
 
-By default, the browsable file system path is set to the local folder browsableFS, but you can update it in the docker-compose.yml file.
-You can proceed in 2 ways:
+Once image is built use
+```
+docker run --rm -it nxsiteman 
+```
 
-1. by binding the mounted volume to your desired folder
-2. by passing the `BROWSABLE_FS` environment variable to the container
 
-The environment variable will have precedence over the volume

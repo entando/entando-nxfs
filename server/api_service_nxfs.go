@@ -88,7 +88,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, en
 	// Convert []byte to string and print to screen
 	fileContentString := string(fileContent)
 
-	return Response(http.StatusOK, FileContent{DirectoryObject: toDirectoryObject(pathToBrowse, requestedFile), Content: fmt.Sprintf(fileContentString)}), nil
+	return Response(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
 }
 
 // ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
@@ -106,17 +106,35 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Con
 }
 
 // ApiNxfsObjectsEncodedPathPut - Creates or updates an object
-func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, encodedPath string, directoryObject DirectoryObject) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathPut with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, encodedPath string, fileObject FileObject) (ImplResponse, error) {
 
-	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
-	//return Response(200, DirectoryObject{}), nil
+	// dir can't have content
+	if fileObject.Type == D && "" != fileObject.Content {
+		return *ErrorResponse(http.StatusBadRequest, "full_content_for_dir", "A creation dir request can't contain a file content value"), nil
+	} else if fileObject.Type == F && "" == fileObject.Content {
+		// file must have content
+		return *ErrorResponse(http.StatusBadRequest, "empty_content", "A file with empty content can't be saved"), nil
+	}
 
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
+	decodedPath, errResponse := decodePath(encodedPath)
+	if nil != errResponse {
+		return *errResponse, nil
+	}
 
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathPut method not implemented")
+	fullPathToSave := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
+
+	var errResp *ImplResponse
+	if fileObject.Type == D {
+		errResp = createDirectory(fullPathToSave)
+	} else {
+		errResp = createFile(fullPathToSave, fileObject)
+	}
+
+	if nil != errResp {
+		return *errResp, nil
+	} else {
+		return Response(http.StatusCreated, toDirectoryObjectFromFilePath(fullPathToSave)), nil
+	}
 }
 
 // browseFileTree - traverse recursively the path represented by fileInfo
@@ -133,7 +151,7 @@ func browseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth
 		return directoryObjects, nil
 	}
 
-	// otherwise proceed with the tree traversion
+	// otherwise proceed with the tree inspection
 	dirAbsPath := filepath.Join(path, fileInfo.Name())
 
 	// read dir
@@ -153,23 +171,62 @@ func browseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth
 	return directoryObjects, nil
 }
 
-// composeFullPathOrErrorResponse - receives a URL encoded path, decodes it and return the corresponding full path, the fileInfo of the requested file/folder and a possible REST response containing an error
+// composeFullPathOrErrorResponse - receives a URL encoded path, decodes it and return the corresponding full path (without filename), the fileInfo of the requested file/folder and a possible REST response containing an error
 func composeFullPathOrErrorResponse(encodedPath string) (fullPath string, fileInfoToBrowse os.FileInfo, errorResponse *ImplResponse) {
 
 	// define paths
-	decodedPath, err := url.PathUnescape(encodedPath)
-	if nil != err {
-		return "", nil, ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error())
+	decodedPath, errResponse := decodePath(encodedPath)
+	if nil != errResponse {
+		return "", nil, errResponse
 	}
+
 	fullPathToBrowse := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
 
 	// does path exist?
+	var err error
 	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {
 		return "", nil, ErrorResponse(http.StatusNotFound, "path_not_found", err.Error())
 	}
 
 	// extract pathToBrowse path
-	pathToBrowse := path.Dir(fullPathToBrowse)
+	fullPath = path.Dir(fullPathToBrowse)
 
-	return pathToBrowse, fileInfoToBrowse, nil
+	return fullPath, fileInfoToBrowse, nil
+}
+
+// decodePath - receives an url encoded path, decodes and returns it. if a decode error occurs, it will return an error ImplResponse
+func decodePath(encodedPath string) (decodedPath string, errorResponse *ImplResponse) {
+
+	var err error
+	decodedPath, err = url.PathUnescape(encodedPath)
+	if nil != err {
+		return "", ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error())
+	}
+
+	return decodedPath, nil
+}
+
+// createDirectory - create a directory in the received path. return an error ImplResponse if an error occurs, nil otherwise
+func createDirectory(dirPath string) (errorResp *ImplResponse) {
+
+	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+		err := os.Mkdir(dirPath, 0755)
+		if nil != err {
+			errorResp = ErrorResponse(http.StatusBadRequest, "dir_write_error", err.Error())
+		}
+	}
+
+	return errorResp
+}
+
+// createFile - create a file in the received path containing the received content return an error ImplResponse if an error occurs, nil otherwise
+func createFile(path string, fileObject FileObject) (errorResp *ImplResponse) {
+
+	data := []byte(fileObject.Content)
+	err := ioutil.WriteFile(path, data, 0644)
+	if nil != err {
+		errorResp = ErrorResponse(http.StatusBadRequest, "write_error", err.Error())
+	}
+
+	return errorResp
 }
