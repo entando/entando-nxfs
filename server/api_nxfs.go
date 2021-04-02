@@ -69,6 +69,11 @@ func (c *DefaultApiController) ApiNxfsBrowseEncodedPathGet(w http.ResponseWriter
 	query := r.URL.Query()
 	encodedPath := params["EncodedPath"]
 	maxdepth, err := parseInt32Parameter(query.Get("maxdepth"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	result, err := c.service.ApiNxfsBrowseEncodedPathGet(r.Context(), encodedPath, maxdepth)
 	//If an error occured, encode the error with the status code
 	if err != nil {
@@ -129,13 +134,13 @@ func (c *DefaultApiController) ApiNxfsObjectsEncodedPathPublishPost(w http.Respo
 func (c *DefaultApiController) ApiNxfsObjectsEncodedPathPut(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	encodedPath := params["EncodedPath"]
-	directoryObject := &DirectoryObject{}
-	if err := json.NewDecoder(r.Body).Decode(&directoryObject); err != nil {
+	fileObject := &FileObject{}
+	if err := json.NewDecoder(r.Body).Decode(&fileObject); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	result, err := c.service.ApiNxfsObjectsEncodedPathPut(r.Context(), encodedPath, *directoryObject)
+	result, err := c.service.ApiNxfsObjectsEncodedPathPut(r.Context(), encodedPath, *fileObject)
 	//If an error occured, encode the error with the status code
 	if err != nil {
 		EncodeJSONResponse(err.Error(), &result.Code, w)

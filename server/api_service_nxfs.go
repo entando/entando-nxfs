@@ -11,13 +11,9 @@ package nxsiteman
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	pkgErr "github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"os"
 	"path"
 	"path/filepath"
 )
@@ -37,13 +33,13 @@ func NewDefaultApiService() DefaultApiServicer {
 func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (ImplResponse, error) {
 
 	pathToBrowse, fileInfoToBrowse, errorReponse := composeFullPathOrErrorResponse(encodedPath)
-	if nil != errorReponse {
+	if errorReponse != nil {
 		return *errorReponse, nil
 	}
 
 	// recursive function
 	dirObjectArray, err := browseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []DirectoryObject{})
-	if nil != err {
+	if err != nil {
 		return *ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
 	}
 
@@ -52,23 +48,33 @@ func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, enc
 
 // ApiNxfsObjectsEncodedPathDelete - Deletes an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context, encodedPath string) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathDelete with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
 
-	//TODO: Uncomment the next line to return response Response(204, {}) or use other options such as http.Ok ...
-	//return Response(204, nil),nil
+	pathToDelete, fileToDelete, errorReponse := composeFullPathOrErrorResponse(encodedPath)
+	if errorReponse != nil {
+		if errorReponse.Code == http.StatusNotFound {
+			return Response(http.StatusNoContent, nil), nil
+		} else {
+			return *errorReponse, nil
+		}
+	}
+	absPathFile := path.Join(pathToDelete, fileToDelete.Name())
 
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
+	if isDirWithChildren(absPathFile, fileToDelete) {
+		return *ErrorResponse(http.StatusUnprocessableEntity, "dir_not_empty", "The folder to delete is not empty"), nil
+	}
 
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathDelete method not implemented")
+	if errorReponse = deleteFile(absPathFile); errorReponse != nil {
+		return *errorReponse, nil
+	}
+
+	return Response(http.StatusNoContent, nil), nil
 }
 
 // ApiNxfsObjectsEncodedPathGet - Gets an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
 	pathToBrowse, requestedFile, errorReponse := composeFullPathOrErrorResponse(encodedPath)
-	if nil != errorReponse {
+	if errorReponse != nil {
 		return *errorReponse, nil
 	}
 
@@ -88,7 +94,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, en
 	// Convert []byte to string and print to screen
 	fileContentString := string(fileContent)
 
-	return Response(http.StatusOK, FileContent{DirectoryObject: toDirectoryObject(pathToBrowse, requestedFile), Content: fmt.Sprintf(fileContentString)}), nil
+	return Response(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
 }
 
 // ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
@@ -102,74 +108,37 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Con
 	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
 	//return Response(0, Error{}), nil
 
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathPublishPost method not implemented")
+	return Response(200, "MOCKED RESPONSE"), nil
 }
 
 // ApiNxfsObjectsEncodedPathPut - Creates or updates an object
-func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, encodedPath string, directoryObject DirectoryObject) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathPut with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, encodedPath string, fileObject FileObject) (ImplResponse, error) {
 
-	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
-	//return Response(200, DirectoryObject{}), nil
-
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
-
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathPut method not implemented")
-}
-
-// browseFileTree - traverse recursively the path represented by fileInfo
-func browseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth int32, directoryObjects []DirectoryObject) ([]DirectoryObject, error) {
-
-	// if depth reached return
-	if currDepth > maxDepth && maxDepth != 0 {
-		return directoryObjects, nil
+	// dir can't have content
+	if fileObject.Type == D && "" != fileObject.Content {
+		return *ErrorResponse(http.StatusBadRequest, "full_content_for_dir", "A creation dir request can't contain a file content value"), nil
+	} else if fileObject.Type == F && "" == fileObject.Content {
+		// file must have content
+		return *ErrorResponse(http.StatusBadRequest, "empty_content", "A file with empty content can't be saved"), nil
 	}
 
-	// if the current one is a file add it to the result list and return
-	if !fileInfo.IsDir() {
-		directoryObjects = append(directoryObjects, toDirectoryObject(path, fileInfo))
-		return directoryObjects, nil
+	decodedPath, errResponse := decodePath(encodedPath)
+	if errResponse != nil {
+		return *errResponse, nil
 	}
 
-	// otherwise proceed with the tree traversion
-	dirAbsPath := filepath.Join(path, fileInfo.Name())
+	fullPathToSave := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
 
-	// read dir
-	readFilesInfo, err := ioutil.ReadDir(dirAbsPath)
-	if nil != err {
-		return directoryObjects, pkgErr.Wrap(err, fmt.Sprintf("can't read directory %s", dirAbsPath))
+	var errResp *ImplResponse
+	if fileObject.Type == D {
+		errResp = createDirectory(fullPathToSave)
+	} else {
+		errResp = createFile(fullPathToSave, fileObject)
 	}
 
-	// call recursively
-	for _, file := range readFilesInfo {
-		directoryObjects, err = browseFileTree(dirAbsPath, file, currDepth+1, maxDepth, directoryObjects)
-		if nil != err {
-			return directoryObjects, err
-		}
+	if errResp != nil {
+		return *errResp, nil
+	} else {
+		return Response(http.StatusCreated, toDirectoryObjectFromFilePath(fullPathToSave)), nil
 	}
-
-	return directoryObjects, nil
-}
-
-// composeFullPathOrErrorResponse - receives a URL encoded path, decodes it and return the corresponding full path, the fileInfo of the requested file/folder and a possible REST response containing an error
-func composeFullPathOrErrorResponse(encodedPath string) (fullPath string, fileInfoToBrowse os.FileInfo, errorResponse *ImplResponse) {
-
-	// define paths
-	decodedPath, err := url.PathUnescape(encodedPath)
-	if nil != err {
-		return "", nil, ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error())
-	}
-	fullPathToBrowse := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
-
-	// does path exist?
-	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {
-		return "", nil, ErrorResponse(http.StatusNotFound, "path_not_found", err.Error())
-	}
-
-	// extract pathToBrowse path
-	pathToBrowse := path.Dir(fullPathToBrowse)
-
-	return pathToBrowse, fileInfoToBrowse, nil
 }

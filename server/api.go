@@ -34,5 +34,5 @@ type DefaultApiServicer interface {
 	ApiNxfsObjectsEncodedPathDelete(context.Context, string) (ImplResponse, error)
 	ApiNxfsObjectsEncodedPathGet(context.Context, string) (ImplResponse, error)
 	ApiNxfsObjectsEncodedPathPublishPost(context.Context, string) (ImplResponse, error)
-	ApiNxfsObjectsEncodedPathPut(context.Context, string, DirectoryObject) (ImplResponse, error)
+	ApiNxfsObjectsEncodedPathPut(context.Context, string, FileObject) (ImplResponse, error)
 }
