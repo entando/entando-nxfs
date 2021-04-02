@@ -1,6 +1,9 @@
 package nxsiteman
 
-import "os"
+import (
+	"os"
+	"path/filepath"
+)
 
 // toDirectoryObject create and return a DirectoryObject starting by the received path and FileInfo
 func toDirectoryObject(path string, fileInfo os.FileInfo) DirectoryObject {
@@ -14,9 +17,14 @@ func toDirectoryObject(path string, fileInfo os.FileInfo) DirectoryObject {
 		objectType = D
 	}
 
+	rel, err := filepath.Rel(GetBrowsableFsRootPath(), path)
+	if nil != err {
+		panic("Error during relativization of the file " + fileInfo.Name())
+	}
+
 	return DirectoryObject{
 		Name:    fileInfo.Name(),
-		Path:    path,
+		Path:    rel,
 		Size:    fileInfo.Size(),
 		Type:    objectType,
 		Created: ActionLog{At: fileInfo.ModTime()},

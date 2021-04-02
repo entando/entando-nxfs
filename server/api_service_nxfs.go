@@ -22,8 +22,6 @@ import (
 	"path/filepath"
 )
 
-const fsBaseDir = "browsableFS"
-
 // DefaultApiService is a service that implents the logic for the DefaultApiServicer
 // This service should implement the business logic for every endpoint for the DefaultApi API.
 // Include any external packages or services that will be required by this service.
@@ -163,7 +161,7 @@ func composeFullPathOrErrorResponse(encodedPath string) (fullPath string, fileIn
 	if nil != err {
 		return "", nil, ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error())
 	}
-	fullPathToBrowse := filepath.Join(fsBaseDir, decodedPath)
+	fullPathToBrowse := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
 
 	// does path exist?
 	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {

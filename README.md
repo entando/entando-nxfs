@@ -24,13 +24,15 @@ go run main.go
 ```
 
 To run the server in a docker container
+
 ```
-docker build --network=host -t nxsiteman .
+docker-compose up
 ```
 
-Once image is built use
-```
-docker run --rm -it nxsiteman 
-```
+By default, the browsable file system path is set to the local folder browsableFS, but you can update it in the docker-compose.yml file.
+You can proceed in 2 ways:
 
+1. by binding the mounted volume to your desired folder
+2. by passing the `BROWSABLE_FS` environment variable to the container
 
+The environment variable will have precedence over the volume
