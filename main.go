@@ -10,10 +10,9 @@
 package main
 
 import (
+	nxsiteman "github.com/entando/entando-nxfs/server"
 	"log"
 	"net/http"
-
-	nxsiteman "github.com/GIT_USER_ID/GIT_REPO_ID/server"
 )
 
 func main() {

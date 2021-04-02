@@ -38,27 +38,15 @@ func NewDefaultApiService() DefaultApiServicer {
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
 func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (ImplResponse, error) {
 
-	var fileInfoToBrowse os.FileInfo
-	var err error
-
-	// define paths
-	decodedPath, err := url.PathUnescape(encodedPath)
-	if nil != err {
-		return ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error()), nil
+	pathToBrowse, fileInfoToBrowse, errorReponse := composeFullPathOrErrorResponse(encodedPath)
+	if nil != errorReponse {
+		return *errorReponse, nil
 	}
-	fullPathToBrowse := filepath.Join(fsBaseDir, decodedPath)
-
-	// does path exist?
-	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {
-		return ErrorResponse(http.StatusNotFound, "path_not_found", err.Error()), nil
-	}
-	// extract fileInfoToBrowse path
-	pathToBrowse := path.Dir(fullPathToBrowse)
 
 	// recursive function
 	dirObjectArray, err := browseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []DirectoryObject{})
 	if nil != err {
-		return ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
+		return *ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
 	}
 
 	return Response(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
@@ -80,16 +68,29 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context,
 
 // ApiNxfsObjectsEncodedPathGet - Gets an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, encodedPath string) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathGet with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
 
-	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
-	//return Response(200, DirectoryObject{}), nil
+	pathToBrowse, requestedFile, errorReponse := composeFullPathOrErrorResponse(encodedPath)
+	if nil != errorReponse {
+		return *errorReponse, nil
+	}
 
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
+	// if dir return error
+	if requestedFile.IsDir() {
+		return *ErrorResponse(http.StatusBadRequest, "dir_requested", "The received encoded path "+
+			"corresponds to a directory. This endpoint returns files content, to browse a directory please use the browse one"), nil
+	}
 
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathGet method not implemented")
+	// return file content
+	fileContent, err := ioutil.ReadFile(path.Join(pathToBrowse, requestedFile.Name()))
+	if err != nil {
+		return *ErrorResponse(http.StatusBadRequest, "err_reading_content",
+			fmt.Sprintf("An error occurred during the reading of the file content: %q", err.Error())), nil
+	}
+
+	// Convert []byte to string and print to screen
+	fileContentString := string(fileContent)
+
+	return Response(http.StatusOK, FileContent{DirectoryObject: toDirectoryObject(pathToBrowse, requestedFile), Content: fmt.Sprintf(fileContentString)}), nil
 }
 
 // ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
@@ -152,4 +153,25 @@ func browseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth
 	}
 
 	return directoryObjects, nil
+}
+
+// composeFullPathOrErrorResponse - receives a URL encoded path, decodes it and return the corresponding full path, the fileInfo of the requested file/folder and a possible REST response containing an error
+func composeFullPathOrErrorResponse(encodedPath string) (fullPath string, fileInfoToBrowse os.FileInfo, errorResponse *ImplResponse) {
+
+	// define paths
+	decodedPath, err := url.PathUnescape(encodedPath)
+	if nil != err {
+		return "", nil, ErrorResponse(http.StatusInternalServerError, "error_decoding_path", err.Error())
+	}
+	fullPathToBrowse := filepath.Join(fsBaseDir, decodedPath)
+
+	// does path exist?
+	if fileInfoToBrowse, err = os.Stat(fullPathToBrowse); os.IsNotExist(err) {
+		return "", nil, ErrorResponse(http.StatusNotFound, "path_not_found", err.Error())
+	}
+
+	// extract pathToBrowse path
+	pathToBrowse := path.Dir(fullPathToBrowse)
+
+	return pathToBrowse, fileInfoToBrowse, nil
 }
