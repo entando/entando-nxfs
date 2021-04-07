@@ -11,6 +11,7 @@ package nxsiteman
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -97,20 +98,6 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, en
 	return Response(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
 }
 
-// ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
-func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Context, encodedPath string) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathPublishPost with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
-
-	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
-	//return Response(200, DirectoryObject{}), nil
-
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
-
-	return Response(200, "MOCKED RESPONSE"), nil
-}
-
 // ApiNxfsObjectsEncodedPathPut - Creates or updates an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, encodedPath string, fileObject FileObject) (ImplResponse, error) {
 
@@ -141,4 +128,28 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 	} else {
 		return Response(http.StatusCreated, toDirectoryObjectFromFilePath(fullPathToSave)), nil
 	}
+}
+
+// ApiNxfsObjectsEncodedPathPublishPut - Publishes an object
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPut(ctx context.Context, encodedPath string) (ImplResponse, error) {
+
+	if errorResponse := publishPage(encodedPath); errorResponse != nil {
+		return *errorResponse, nil
+	} else {
+		return Response(http.StatusOK, nil), nil
+	}
+}
+
+// ApiNxfsObjectsEncodedPathUnpublishPut - Publishes an object
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPut(ctx context.Context, encodedPath string) (ImplResponse, error) {
+	// TODO - update ApiNxfsObjectsEncodedPathUnpublishPut with the required logic for this service method.
+	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+
+	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
+	//return Response(200, DirectoryObject{}), nil
+
+	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
+	//return Response(0, Error{}), nil
+
+	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathUnpublishPut method not implemented")
 }

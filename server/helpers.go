@@ -11,10 +11,13 @@ package nxsiteman
 
 import (
 	"os"
+	"path/filepath"
 )
 
 const envVarBrowsableFs = "BROWSABLE_FS"
 const fsBaseDir = "./browsableFS"
+const publishedPagesRelativePath = "pages"
+const draftPagesRelativePath = "draft_pages"
 
 var browsableFsPath = ""
 
@@ -37,4 +40,14 @@ func GetBrowsableFsRootPath() string {
 		}
 	}
 	return browsableFsPath
+}
+
+// GetPublishedPagesPath - return the base path in which published pages are saved
+func GetPublishedPagesPath() string {
+	return filepath.Join(GetBrowsableFsRootPath(), publishedPagesRelativePath)
+}
+
+// GetDraftPagesPath - return the base path in which draft pages are saved
+func GetDraftPagesPath() string {
+	return filepath.Join(GetBrowsableFsRootPath(), draftPagesRelativePath)
 }

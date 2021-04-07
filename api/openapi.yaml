@@ -34,6 +34,24 @@ paths:
               schema:
                 type: object
                 $ref: "#/components/schemas/FlatDirectoryTree"
+        '400':
+          description: 'EncodedPath param decode error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 'Path not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 'Error during browse operation'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Error
           content:
@@ -55,6 +73,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DirectoryObject"
+        '400':
+          description: 'EncodedPath param decode error OR folder content requested OR error during content read'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 'Path not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Error
           content:
@@ -72,7 +102,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FileObject'
+              $ref: '#/components/schemas/FileContent'
       responses:
         '200':
           description: 'Directory Object'
@@ -80,6 +110,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DirectoryObject"
+        '400':
+          description: 'EncodedPath param decode error OR inconsistent parameters'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 'Path not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Error
           content:
@@ -94,6 +136,24 @@ paths:
       responses:
         '204':
           description: 'No Content'
+        '400':
+          description: 'EncodedPath param decode error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: 'EncodedPath is dir but not empty'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: 'Removal error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         default:
           description: Error
           content:
@@ -102,7 +162,26 @@ paths:
                 $ref: '#/components/schemas/Error'
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/objects/{EncodedPath}/publish:
-    post:
+    put:
+      summary: 'Publishes an object'
+      parameters:
+        - $ref: "#/components/parameters/EncodedPath"
+      responses:
+        '200':
+          description: 'Directory Object'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectoryObject"
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /api/nxfs/objects/{EncodedPath}/unpublish:
+    put:
       summary: 'Publishes an object'
       parameters:
         - $ref: "#/components/parameters/EncodedPath"

@@ -3,6 +3,7 @@ package nxsiteman
 import (
 	"fmt"
 	pkgErr "github.com/pkg/errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -20,13 +21,33 @@ func isDirWithChildren(absPathFile string, fileToDelete os.FileInfo) bool {
 	}
 }
 
-// getFileInfoIfPathExist - if the received path exists return the corresponding os.FileInfo, otherwise return an error ImplResponse
+// getFileInfoIfPathExistOrErrorResponse - if the received path exists return the corresponding os.FileInfo, otherwise return an error ImplResponse
 func getFileInfoIfPathExistOrErrorResponse(pathToCheck string) (os.FileInfo, *ImplResponse) {
 	if fileInfo, err := os.Stat(pathToCheck); os.IsNotExist(err) {
 		return nil, ErrorResponse(http.StatusNotFound, "path_not_found", err.Error())
 	} else {
 		return fileInfo, nil
 	}
+}
+
+// getDraftPageInfoIfExistOrErrorResponse - if the received path exists as relative path in the draft pages folder return the corresponding os.FileInfo, otherwise return an error ImplResponse
+func getDraftPageInfoIfExistOrErrorResponse(pathToCheck string) (os.FileInfo, *ImplResponse) {
+	return getFileInfoIfPathExistOrErrorResponse(path.Join(GetDraftPagesPath(), pathToCheck))
+}
+
+// getPublishedPageInfoIfExistOrErrorResponse - if the received path exists as relative path in the published pages folder return the corresponding os.FileInfo, otherwise return an error ImplResponse
+func getPublishedPageInfoIfExistOrErrorResponse(pathToCheck string) (os.FileInfo, *ImplResponse) {
+	return getFileInfoIfPathExistOrErrorResponse(path.Join(GetPublishedPagesPath(), pathToCheck))
+}
+
+// relativizeToDraftPageFolder - receive a path and relativize it to the draft pages folder
+func relativizeToDraftPageFolder(pathToRelativize string) string {
+	return path.Join(GetDraftPagesPath(), pathToRelativize)
+}
+
+// relativizeToPublishedPageFolder - receive a path and relativize it to the draft pages folder
+func relativizeToPublishedPageFolder(pathToRelativize string) string {
+	return path.Join(GetPublishedPagesPath(), pathToRelativize)
 }
 
 // createFile - create a file in the received path containing the received content return an error ImplResponse if an error occurs, nil otherwise
@@ -130,4 +151,39 @@ func composeFullPathOrErrorResponse(encodedPath string) (fullPath string, fileIn
 	fullPath = path.Dir(fullPathToBrowse)
 
 	return fullPath, fileInfoToBrowse, nil
+}
+
+// copyFileTo - copy the file identified by originFile to the destination identified by destinationFile. return an error ImplResponse if an error occur, nil otherwise
+func copyFileTo(sourceFile string, destinationFile string) *ImplResponse {
+
+	// create path if needed
+	destinationFolder := path.Dir(destinationFile)
+	if _, implResponse := getFileInfoIfPathExistOrErrorResponse(destinationFolder); nil != implResponse {
+		err := os.MkdirAll(destinationFolder, os.ModePerm)
+		if err != nil {
+			return ErrorResponse(http.StatusInternalServerError, "path_creation_error", "An error occurred during the creation of the published page path")
+		}
+	}
+
+	// input
+	in, err := os.Open(sourceFile)
+	if err != nil {
+		return ErrorResponse(http.StatusInternalServerError, "draft_read_error", fmt.Sprintf("An error occurred during the read operation of the draft page file %s", sourceFile))
+	}
+	defer in.Close()
+
+	// output
+	out, err := os.Create(destinationFile)
+	if err != nil {
+		return ErrorResponse(http.StatusInternalServerError, "published_creation_error", fmt.Sprintf("An error occurred during the creation of the published page file %s", destinationFile))
+	}
+	defer out.Close()
+
+	// copy file
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return ErrorResponse(http.StatusInternalServerError, "published_copy_error", "An error occurred during the copy of the draft page file to the the published page file")
+	} else {
+		return nil
+	}
 }
