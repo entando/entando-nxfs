@@ -49,10 +49,10 @@ func (c *DefaultApiController) Routes() Routes {
 			c.ApiNxfsObjectsEncodedPathGet,
 		},
 		{
-			"ApiNxfsObjectsEncodedPathPublishPut",
-			strings.ToUpper("Put"),
+			"ApiNxfsObjectsEncodedPathPublishPost",
+			strings.ToUpper("Post"),
 			"/api/nxfs/objects/{EncodedPath}/publish",
-			c.ApiNxfsObjectsEncodedPathPublishPut,
+			c.ApiNxfsObjectsEncodedPathPublishPost,
 		},
 		{
 			"ApiNxfsObjectsEncodedPathPut",
@@ -61,10 +61,10 @@ func (c *DefaultApiController) Routes() Routes {
 			c.ApiNxfsObjectsEncodedPathPut,
 		},
 		{
-			"ApiNxfsObjectsEncodedPathUnpublishPut",
-			strings.ToUpper("Put"),
+			"ApiNxfsObjectsEncodedPathUnpublishPost",
+			strings.ToUpper("Post"),
 			"/api/nxfs/objects/{EncodedPath}/unpublish",
-			c.ApiNxfsObjectsEncodedPathUnpublishPut,
+			c.ApiNxfsObjectsEncodedPathUnpublishPost,
 		},
 	}
 }
@@ -121,11 +121,11 @@ func (c *DefaultApiController) ApiNxfsObjectsEncodedPathGet(w http.ResponseWrite
 
 }
 
-// ApiNxfsObjectsEncodedPathPublishPut - Publishes an object
-func (c *DefaultApiController) ApiNxfsObjectsEncodedPathPublishPut(w http.ResponseWriter, r *http.Request) {
+// ApiNxfsObjectsEncodedPathPublishPost - Publishes a page
+func (c *DefaultApiController) ApiNxfsObjectsEncodedPathPublishPost(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	encodedPath := params["EncodedPath"]
-	result, err := c.service.ApiNxfsObjectsEncodedPathPublishPut(r.Context(), encodedPath)
+	result, err := c.service.ApiNxfsObjectsEncodedPathPublishPost(r.Context(), encodedPath)
 	//If an error occured, encode the error with the status code
 	if err != nil {
 		EncodeJSONResponse(err.Error(), &result.Code, w)
@@ -157,11 +157,11 @@ func (c *DefaultApiController) ApiNxfsObjectsEncodedPathPut(w http.ResponseWrite
 
 }
 
-// ApiNxfsObjectsEncodedPathUnpublishPut - Publishes an object
-func (c *DefaultApiController) ApiNxfsObjectsEncodedPathUnpublishPut(w http.ResponseWriter, r *http.Request) {
+// ApiNxfsObjectsEncodedPathUnpublishPost - Unpublishes a page
+func (c *DefaultApiController) ApiNxfsObjectsEncodedPathUnpublishPost(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	encodedPath := params["EncodedPath"]
-	result, err := c.service.ApiNxfsObjectsEncodedPathUnpublishPut(r.Context(), encodedPath)
+	result, err := c.service.ApiNxfsObjectsEncodedPathUnpublishPost(r.Context(), encodedPath)
 	//If an error occured, encode the error with the status code
 	if err != nil {
 		EncodeJSONResponse(err.Error(), &result.Code, w)

@@ -11,7 +11,6 @@ package nxsiteman
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -33,9 +32,9 @@ func NewDefaultApiService() DefaultApiServicer {
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
 func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (ImplResponse, error) {
 
-	pathToBrowse, fileInfoToBrowse, errorReponse := composeFullPathOrErrorResponse(encodedPath)
-	if errorReponse != nil {
-		return *errorReponse, nil
+	pathToBrowse, fileInfoToBrowse, errorResponse := composeFullPathOrErrorResponse(encodedPath)
+	if errorResponse != nil {
+		return *errorResponse, nil
 	}
 
 	// recursive function
@@ -44,18 +43,18 @@ func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, enc
 		return *ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
 	}
 
-	return Response(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
+	return SuccessResponse(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
 }
 
 // ApiNxfsObjectsEncodedPathDelete - Deletes an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
-	pathToDelete, fileToDelete, errorReponse := composeFullPathOrErrorResponse(encodedPath)
-	if errorReponse != nil {
-		if errorReponse.Code == http.StatusNotFound {
-			return Response(http.StatusNoContent, nil), nil
+	pathToDelete, fileToDelete, errorResponse := composeFullPathOrErrorResponse(encodedPath)
+	if errorResponse != nil {
+		if errorResponse.Code == http.StatusNotFound {
+			return SuccessResponse(http.StatusNoContent, nil), nil
 		} else {
-			return *errorReponse, nil
+			return *errorResponse, nil
 		}
 	}
 	absPathFile := path.Join(pathToDelete, fileToDelete.Name())
@@ -64,19 +63,19 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context,
 		return *ErrorResponse(http.StatusUnprocessableEntity, "dir_not_empty", "The folder to delete is not empty"), nil
 	}
 
-	if errorReponse = deleteFile(absPathFile); errorReponse != nil {
-		return *errorReponse, nil
+	if errorResponse = deleteFile(absPathFile); errorResponse != nil {
+		return *errorResponse, nil
 	}
 
-	return Response(http.StatusNoContent, nil), nil
+	return SuccessResponse(http.StatusNoContent, nil), nil
 }
 
 // ApiNxfsObjectsEncodedPathGet - Gets an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
-	pathToBrowse, requestedFile, errorReponse := composeFullPathOrErrorResponse(encodedPath)
-	if errorReponse != nil {
-		return *errorReponse, nil
+	pathToBrowse, requestedFile, errorResponse := composeFullPathOrErrorResponse(encodedPath)
+	if errorResponse != nil {
+		return *errorResponse, nil
 	}
 
 	// if dir return error
@@ -95,7 +94,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, en
 	// Convert []byte to string and print to screen
 	fileContentString := string(fileContent)
 
-	return Response(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
+	return SuccessResponse(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
 }
 
 // ApiNxfsObjectsEncodedPathPut - Creates or updates an object
@@ -109,47 +108,43 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 		return *ErrorResponse(http.StatusBadRequest, "empty_content", "A file with empty content can't be saved"), nil
 	}
 
-	decodedPath, errResponse := decodePath(encodedPath)
-	if errResponse != nil {
-		return *errResponse, nil
+	decodedPath, decodeErrResp := decodePath(encodedPath)
+	if decodeErrResp != nil {
+		return *decodeErrResp, nil
 	}
 
 	fullPathToSave := filepath.Join(GetBrowsableFsRootPath(), decodedPath)
 
-	var errResp *ImplResponse
+	var creationErrResp *ImplResponse
 	if fileObject.Type == D {
-		errResp = createDirectory(fullPathToSave)
+		creationErrResp = createDirectory(fullPathToSave)
 	} else {
-		errResp = createFile(fullPathToSave, fileObject)
+		creationErrResp = createFile(fullPathToSave, fileObject)
 	}
 
-	if errResp != nil {
-		return *errResp, nil
+	if creationErrResp != nil {
+		return *creationErrResp, nil
 	} else {
-		return Response(http.StatusCreated, toDirectoryObjectFromFilePath(fullPathToSave)), nil
+		return SuccessResponse(http.StatusCreated, toDirectoryObjectFromFilePath(fullPathToSave)), nil
 	}
 }
 
-// ApiNxfsObjectsEncodedPathPublishPut - Publishes an object
-func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPut(ctx context.Context, encodedPath string) (ImplResponse, error) {
+// ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
 	if errorResponse := publishPage(encodedPath); errorResponse != nil {
 		return *errorResponse, nil
 	} else {
-		return Response(http.StatusOK, nil), nil
+		return SuccessResponse(http.StatusOK, nil), nil
 	}
 }
 
-// ApiNxfsObjectsEncodedPathUnpublishPut - Publishes an object
-func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPut(ctx context.Context, encodedPath string) (ImplResponse, error) {
-	// TODO - update ApiNxfsObjectsEncodedPathUnpublishPut with the required logic for this service method.
-	// Add api_default_service.go to the .openapi-generator-ignore to avoid overwriting this service implementation when updating open api generation.
+// ApiNxfsObjectsEncodedPathUnpublishPost - Publishes an object
+func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPost(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
-	//TODO: Uncomment the next line to return response Response(200, DirectoryObject{}) or use other options such as http.Ok ...
-	//return Response(200, DirectoryObject{}), nil
-
-	//TODO: Uncomment the next line to return response Response(0, Error{}) or use other options such as http.Ok ...
-	//return Response(0, Error{}), nil
-
-	return Response(http.StatusNotImplemented, nil), errors.New("ApiNxfsObjectsEncodedPathUnpublishPut method not implemented")
+	if errorResponse := unpublishPage(encodedPath); errorResponse != nil {
+		return *errorResponse, nil
+	} else {
+		return SuccessResponse(http.StatusOK, nil), nil
+	}
 }

@@ -6,8 +6,7 @@ import (
 	"strings"
 )
 
-const publishedPageSuffix = ".page"
-const draftPageSuffix = publishedPageSuffix + ".draft"
+const pageSuffix = ".page"
 
 // publishPage - publish the received draft page and return an error ImplResponse if an error occurs, nil otherwise
 func publishPage(encodedDraftPagePath string) (errorResp *ImplResponse) {
@@ -20,11 +19,10 @@ func publishPage(encodedDraftPagePath string) (errorResp *ImplResponse) {
 		return errResponse
 	}
 
-	suffixedDraftPage := manageDraftPageSuffix(decodedPath)
-	suffixedPublishedPage := managePublishPageSuffix(decodedPath)
+	suffixedPage := addPageSuffix(decodedPath)
 
 	// check if file exist as draft in the correct folder or error
-	pageFileInfo, errResponse = getDraftPageInfoIfExistOrErrorResponse(suffixedDraftPage)
+	pageFileInfo, errResponse = getDraftPageInfoIfExistOrErrorResponse(suffixedPage)
 	if errResponse != nil {
 		return errResponse
 	}
@@ -34,33 +32,40 @@ func publishPage(encodedDraftPagePath string) (errorResp *ImplResponse) {
 		return ErrorResponse(http.StatusUnprocessableEntity, "cannot_publish_dir", "The received path corresponds to a directory, only pages can be published")
 	}
 
-	draftPageFullPath := relativizeToDraftPageFolder(suffixedDraftPage)
-	publishedPageFullPath := relativizeToPublishedPageFolder(suffixedPublishedPage)
+	draftPageFullPath := relativizeToDraftPageFolder(suffixedPage)
+	publishedPageFullPath := relativizeToPublishedPageFolder(suffixedPage)
 	return copyFileTo(draftPageFullPath, publishedPageFullPath)
 }
 
-// manageDraftPageSuffix - receive a draft page file path and add the page.draft suffix if needed, then return it
-func manageDraftPageSuffix(draftPagePath string) string {
-	return addSuffix(draftPagePath, draftPageSuffix)
-}
+// unpublishPage - unpublish the received published page and return an error ImplResponse if an error occurs, nil otherwise
+func unpublishPage(encodedPublishedPagePath string) (errorResp *ImplResponse) {
 
-// managePublishPageSuffix - receive a published page file path and ensure that it contains the right suffix, then return it
-func managePublishPageSuffix(publishedPagePath string) (suffixedString string) {
-	suffixedString = removeSuffix(publishedPagePath, draftPageSuffix)
-	return addSuffix(suffixedString, publishedPageSuffix)
+	// decode path
+	decodedPath, errResponse := decodePath(encodedPublishedPagePath)
+	if errResponse != nil {
+		return errResponse
+	}
+
+	suffixedPage := addPageSuffix(decodedPath)
+	publishedPageFullPath := relativizeToPublishedPageFolder(suffixedPage)
+
+	if _, implResponse := getFileInfoIfPathExistOrErrorResponse(publishedPageFullPath); nil != implResponse {
+		return implResponse
+	}
+
+	if implResponse := deleteFile(publishedPageFullPath); implResponse != nil {
+		return implResponse
+	}
+
+	return nil
 }
 
 // addSuffix - receive a string and add the suffix if not present, then return it
-func addSuffix(value string, suffix string) (suffixedString string) {
-	if strings.HasSuffix(value, suffix) {
+func addPageSuffix(value string) (suffixedString string) {
+	if strings.HasSuffix(value, pageSuffix) {
 		suffixedString = value
 	} else {
-		suffixedString = value + suffix
+		suffixedString = value + pageSuffix
 	}
 	return suffixedString
-}
-
-// removeSuffix - receive a string and remove the suffix if present, then return it
-func removeSuffix(value string, suffix string) (suffixedString string) {
-	return strings.TrimSuffix(value, suffix)
 }

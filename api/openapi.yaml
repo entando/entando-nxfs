@@ -102,7 +102,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FileContent'
+              $ref: '#/components/schemas/FileObject'
       responses:
         '200':
           description: 'Directory Object'
@@ -162,9 +162,10 @@ paths:
                 $ref: '#/components/schemas/Error'
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/objects/{EncodedPath}/publish:
-    put:
-      summary: 'Publishes an object'
+    post:
+      summary: 'Publishes a page'
       parameters:
+        # this path must be relative to the pages folder
         - $ref: "#/components/parameters/EncodedPath"
       responses:
         '200':
@@ -181,9 +182,10 @@ paths:
                 $ref: '#/components/schemas/Error'
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /api/nxfs/objects/{EncodedPath}/unpublish:
-    put:
-      summary: 'Publishes an object'
+    post:
+      summary: 'Unpublishes a page'
       parameters:
+        # this path must be relative to the pages folder
         - $ref: "#/components/parameters/EncodedPath"
       responses:
         '200':
@@ -266,7 +268,7 @@ components:
       type: string
       enum: [d, f]
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Error:
+    Result:
       type: object
       required:
         - code

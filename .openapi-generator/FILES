@@ -8,9 +8,9 @@ server/impl.go
 server/logger.go
 server/model_action_log.go
 server/model_directory_object.go
-server/model_error.go
 server/model_file_object.go
 server/model_file_object_all_of.go
 server/model_flat_directory_tree.go
 server/model_object_type.go
+server/model_result.go
 server/routers.go

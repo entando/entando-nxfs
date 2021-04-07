@@ -21,9 +21,9 @@ type DefaultApiRouter interface {
 	ApiNxfsBrowseEncodedPathGet(http.ResponseWriter, *http.Request)
 	ApiNxfsObjectsEncodedPathDelete(http.ResponseWriter, *http.Request)
 	ApiNxfsObjectsEncodedPathGet(http.ResponseWriter, *http.Request)
-	ApiNxfsObjectsEncodedPathPublishPut(http.ResponseWriter, *http.Request)
+	ApiNxfsObjectsEncodedPathPublishPost(http.ResponseWriter, *http.Request)
 	ApiNxfsObjectsEncodedPathPut(http.ResponseWriter, *http.Request)
-	ApiNxfsObjectsEncodedPathUnpublishPut(http.ResponseWriter, *http.Request)
+	ApiNxfsObjectsEncodedPathUnpublishPost(http.ResponseWriter, *http.Request)
 }
 
 // DefaultApiServicer defines the api actions for the DefaultApi service
@@ -34,7 +34,7 @@ type DefaultApiServicer interface {
 	ApiNxfsBrowseEncodedPathGet(context.Context, string, int32) (ImplResponse, error)
 	ApiNxfsObjectsEncodedPathDelete(context.Context, string) (ImplResponse, error)
 	ApiNxfsObjectsEncodedPathGet(context.Context, string) (ImplResponse, error)
-	ApiNxfsObjectsEncodedPathPublishPut(context.Context, string) (ImplResponse, error)
+	ApiNxfsObjectsEncodedPathPublishPost(context.Context, string) (ImplResponse, error)
 	ApiNxfsObjectsEncodedPathPut(context.Context, string, FileObject) (ImplResponse, error)
-	ApiNxfsObjectsEncodedPathUnpublishPut(context.Context, string) (ImplResponse, error)
+	ApiNxfsObjectsEncodedPathUnpublishPost(context.Context, string) (ImplResponse, error)
 }
