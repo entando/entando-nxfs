@@ -10,7 +10,7 @@ import (
 // toDirectoryObject - create and return a DirectoryObject starting by the received path and FileInfo
 func toDirectoryObject(path string, fileInfo os.FileInfo) DirectoryObject {
 
-	if nil == fileInfo {
+	if fileInfo == nil {
 		return DirectoryObject{}
 	}
 
@@ -20,7 +20,7 @@ func toDirectoryObject(path string, fileInfo os.FileInfo) DirectoryObject {
 	}
 
 	rel, err := filepath.Rel(GetBrowsableFsRootPath(), path)
-	if nil != err {
+	if err != nil {
 		panic("Error during relativization of the file " + fileInfo.Name())
 	}
 
@@ -52,12 +52,12 @@ func toDirectoryObjectFromFilePath(filePath string) DirectoryObject {
 // toFileObject - create and return a FileObject starting by the received path and FileInfo
 func toFileObject(path string, fileInfo os.FileInfo, fileContentString string) FileObject {
 
-	if nil == fileInfo {
+	if fileInfo == nil {
 		return FileObject{}
 	}
 
 	rel, err := filepath.Rel(GetBrowsableFsRootPath(), path)
-	if nil != err {
+	if err != nil {
 		panic("Error during relativization of the file " + fileInfo.Name())
 	}
 
