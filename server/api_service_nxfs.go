@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 )
@@ -32,18 +33,15 @@ func NewDefaultApiService() DefaultApiServicer {
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
 func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (ImplResponse, error) {
 
-	pathToBrowse, fileInfoToBrowse, errorResponse := composeFullPathOrErrorResponse(encodedPath)
-	if errorResponse != nil {
-		return *errorResponse, nil
-	}
+	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, encodedPath, func(pathToBrowse string, fileInfoToBrowse os.FileInfo) (ImplResponse, error) {
+		// recursive function
+		dirObjectArray, err := browseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []DirectoryObject{})
+		if err != nil {
+			return *ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
+		}
 
-	// recursive function
-	dirObjectArray, err := browseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []DirectoryObject{})
-	if err != nil {
-		return *ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
-	}
-
-	return SuccessResponse(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
+		return SuccessResponse(http.StatusOK, FlatDirectoryTree{dirObjectArray}), nil
+	})
 }
 
 // ApiNxfsObjectsEncodedPathDelete - Deletes an object
@@ -73,28 +71,25 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context,
 // ApiNxfsObjectsEncodedPathGet - Gets an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, encodedPath string) (ImplResponse, error) {
 
-	pathToBrowse, requestedFile, errorResponse := composeFullPathOrErrorResponse(encodedPath)
-	if errorResponse != nil {
-		return *errorResponse, nil
-	}
+	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, encodedPath, func(pathToBrowse string, requestedFile os.FileInfo) (ImplResponse, error) {
+		// if dir return error
+		if requestedFile.IsDir() {
+			return *ErrorResponse(http.StatusBadRequest, "dir_requested", "The received encoded path "+
+				"corresponds to a directory. This endpoint returns files content, to browse a directory please use the browse one"), nil
+		}
 
-	// if dir return error
-	if requestedFile.IsDir() {
-		return *ErrorResponse(http.StatusBadRequest, "dir_requested", "The received encoded path "+
-			"corresponds to a directory. This endpoint returns files content, to browse a directory please use the browse one"), nil
-	}
+		// return file content
+		fileContent, err := ioutil.ReadFile(path.Join(pathToBrowse, requestedFile.Name()))
+		if err != nil {
+			return *ErrorResponse(http.StatusBadRequest, "err_reading_content",
+				fmt.Sprintf("An error occurred during the reading of the file content: %q", err.Error())), nil
+		}
 
-	// return file content
-	fileContent, err := ioutil.ReadFile(path.Join(pathToBrowse, requestedFile.Name()))
-	if err != nil {
-		return *ErrorResponse(http.StatusBadRequest, "err_reading_content",
-			fmt.Sprintf("An error occurred during the reading of the file content: %q", err.Error())), nil
-	}
+		// Convert []byte to string and print to screen
+		fileContentString := string(fileContent)
 
-	// Convert []byte to string and print to screen
-	fileContentString := string(fileContent)
-
-	return SuccessResponse(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
+		return SuccessResponse(http.StatusOK, toFileObject(pathToBrowse, requestedFile, fileContentString)), nil
+	})
 }
 
 // ApiNxfsObjectsEncodedPathPut - Creates or updates an object
@@ -148,3 +143,17 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPost(ctx context.C
 		return SuccessResponse(http.StatusOK, nil), nil
 	}
 }
+
+// DecodedPathAndExecuteApiNxfsFunction - decode the received encodedPath and execute the fnWithDecodedPath function passing it the result of the decoding
+func composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx context.Context, encodedPath string, fnWithDecodedPath apiNxfsFunctionWithComposeFullPathOrError) (ImplResponse, error) {
+
+	pathToBrowse, fileInfoToBrowse, errorResponse := composeFullPathOrErrorResponse(encodedPath)
+	if errorResponse != nil {
+		return *errorResponse, nil
+	}
+
+	return fnWithDecodedPath(pathToBrowse, fileInfoToBrowse)
+}
+
+// apiNxfsFunctionWithcomposeFullPathOrError - a function that receives the result of a path decoding
+type apiNxfsFunctionWithComposeFullPathOrError func(pathToBrowse string, fileInfoToBrowse os.FileInfo) (ImplResponse, error)
