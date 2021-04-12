@@ -9,7 +9,7 @@
 
 package nxsiteman
 
-type Error struct {
+type Result struct {
 	Code string `json:"code"`
 
 	Message string `json:"message"`
