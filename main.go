@@ -11,6 +11,8 @@ package main
 
 import (
 	nxsiteman "github.com/entando/entando-nxfs/server"
+	"github.com/entando/entando-nxfs/server/controller"
+	"github.com/entando/entando-nxfs/server/service"
 	"log"
 	"net/http"
 )
@@ -18,8 +20,8 @@ import (
 func main() {
 	log.Printf("Server started")
 
-	DefaultApiService := nxsiteman.NewDefaultApiService()
-	DefaultApiController := nxsiteman.NewDefaultApiController(DefaultApiService)
+	DefaultApiService := service.NewDefaultApiService()
+	DefaultApiController := controller.NewDefaultApiController(DefaultApiService)
 
 	router := nxsiteman.NewRouter(DefaultApiController)
 

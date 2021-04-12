@@ -11,6 +11,7 @@ package nxsiteman
 
 import (
 	"encoding/json"
+	"github.com/entando/entando-nxfs/server/helper"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"mime/multipart"
@@ -42,7 +43,7 @@ func NewRouter(routers ...Router) *mux.Router {
 		for _, route := range api.Routes() {
 			var handler http.Handler
 			handler = route.HandlerFunc
-			handler = Logger(handler, route.Name)
+			handler = helper.Logger(handler, route.Name)
 
 			router.
 				Methods(route.Method).
@@ -128,8 +129,8 @@ func parseInt64Parameter(param string) (int64, error) {
 	return strconv.ParseInt(param, 10, 64)
 }
 
-// parseInt32Parameter parses a sting parameter to an int32
-func parseInt32Parameter(param string) (int32, error) {
+// ParseInt32Parameter parses a sting parameter to an int32
+func ParseInt32Parameter(param string) (int32, error) {
 	val, err := strconv.ParseInt(param, 10, 32)
 	if err != nil {
 		return -1, err
