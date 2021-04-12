@@ -36,7 +36,7 @@ func PublishPage(encodedDraftPagePath string) (errorResp *net.NxfsResponse) {
 	}
 
 	draftPageFullPath := nxfsfiles.RelativizeToDraftPageFolder(suffixedPage)
-	publishedPageFullPath := nxfsfiles.RelativizeToDraftPageFolder(suffixedPage)
+	publishedPageFullPath := nxfsfiles.RelativizeToPublishedPageFolder(suffixedPage)
 	return nxfsfiles.CopyFileTo(draftPageFullPath, publishedPageFullPath)
 }
 

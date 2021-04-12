@@ -18,8 +18,8 @@ import (
 
 const envVarBrowsableFs = "BROWSABLE_FS"
 const fsBaseDir = "./browsableFS"
-const publishedPagesRelativePath = "pages"
-const draftPagesRelativePath = "draft_pages"
+const publishedPagesRelativePath = "pub_pages"
+const draftPagesRelativePath = "pages"
 
 var browsableFsPath = ""
 
