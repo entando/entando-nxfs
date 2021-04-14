@@ -15,6 +15,9 @@ import (
 	"path/filepath"
 )
 
+const DraftPagesDir = "pages"
+const PublishedPagesDir = "pub_pages"
+
 // IsDirWithChildren - return true if path is a dir and has childre, false otherwise
 func IsDirWithChildren(absPathFile string, fileToDelete os.FileInfo) bool {
 	if children, _ := ioutil.ReadDir(absPathFile); fileToDelete.IsDir() && len(children) > 0 {
@@ -100,10 +103,12 @@ func DeleteFile(filePath string) *net.NxfsResponse {
 }
 
 // BrowseFileTree - traverse recursively the path represented by fileInfo
-func BrowseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth int32, directoryObjects []model.DirectoryObject) ([]model.DirectoryObject, error) {
+func BrowseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth int32, directoryObjects []model.DirectoryObject, showPublishedPages bool) ([]model.DirectoryObject, error) {
 
 	// if depth reached return
-	if currDepth > maxDepth && maxDepth != 0 {
+	if currDepth > maxDepth && maxDepth != 0 ||
+		(showPublishedPages && fileInfo.Name() == DraftPagesDir) ||
+		(!showPublishedPages && fileInfo.Name() == PublishedPagesDir) {
 		return directoryObjects, nil
 	}
 
@@ -124,7 +129,7 @@ func BrowseFileTree(path string, fileInfo os.FileInfo, currDepth int32, maxDepth
 
 	// call recursively
 	for _, file := range readFilesInfo {
-		directoryObjects, err = BrowseFileTree(dirAbsPath, file, currDepth+1, maxDepth, directoryObjects)
+		directoryObjects, err = BrowseFileTree(dirAbsPath, file, currDepth+1, maxDepth, directoryObjects, showPublishedPages)
 		if err != nil {
 			return directoryObjects, err
 		}

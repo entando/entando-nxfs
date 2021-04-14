@@ -33,7 +33,7 @@ type DefaultApiRouter interface {
 // while the service implementation can ignored with the .openapi-generator-ignore file
 // and updated with the logic required for the API.
 type DefaultApiServicer interface {
-	ApiNxfsBrowseEncodedPathGet(context.Context, string, int32) (net.NxfsResponse, error)
+	ApiNxfsBrowseEncodedPathGet(context.Context, string, int32, bool) (net.NxfsResponse, error)
 	ApiNxfsObjectsEncodedPathDelete(context.Context, string) (net.NxfsResponse, error)
 	ApiNxfsObjectsEncodedPathGet(context.Context, string) (net.NxfsResponse, error)
 	ApiNxfsObjectsEncodedPathPublishPost(context.Context, string) (net.NxfsResponse, error)

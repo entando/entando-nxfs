@@ -37,11 +37,11 @@ func NewDefaultApiService() controller.DefaultApiServicer {
 }
 
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
-func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (net.NxfsResponse, error) {
+func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32, publishedPages bool) (net.NxfsResponse, error) {
 
 	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, encodedPath, func(pathToBrowse string, fileInfoToBrowse os.FileInfo) (net.NxfsResponse, error) {
 		// recursive function
-		dirObjectArray, err := nxfsfiles.BrowseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []model.DirectoryObject{})
+		dirObjectArray, err := nxfsfiles.BrowseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []model.DirectoryObject{}, publishedPages)
 		if err != nil {
 			return *helper.ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
 		}
