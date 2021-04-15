@@ -125,8 +125,10 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 
 	if creationErrResp != nil {
 		return *creationErrResp, nil
-	} else {
+	} else if fileObject.Type == model.D {
 		return helper.SuccessResponse(http.StatusCreated, helper.ToDirectoryObjectFromFilePath(fullPathToSave)), nil
+	} else {
+		return helper.SuccessResponse(http.StatusCreated, helper.ToFileObjectFromFilePath(fullPathToSave, fileObject.Content)), nil
 	}
 }
 

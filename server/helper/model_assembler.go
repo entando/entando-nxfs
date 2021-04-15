@@ -50,6 +50,21 @@ func ToDirectoryObjectFromFilePath(filePath string) model.DirectoryObject {
 	return ToDirectoryObject(fullPath, fileInfo)
 }
 
+// ToFileObjectFromFilePath - create and return a FileObject starting by the received path
+func ToFileObjectFromFilePath(filePath string, content string) model.FileObject {
+
+	var fileInfo os.FileInfo
+	var err error
+
+	if fileInfo, err = os.Stat(filePath); os.IsNotExist(err) {
+		panic(err.Error())
+	}
+
+	fullPath := path.Dir(filePath)
+
+	return ToFileObject(fullPath, fileInfo, content)
+}
+
 // ToFileObject - create and return a FileObject starting by the received path and FileInfo
 func ToFileObject(path string, fileInfo os.FileInfo, fileContentString string) model.FileObject {
 

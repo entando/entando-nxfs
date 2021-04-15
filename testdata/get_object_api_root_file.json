@@ -1,0 +1,14 @@
+{
+  "id": 0,
+  "name": "root_file.txt",
+  "path": ".",
+  "size": 45,
+  "type": "f",
+  "_created": {
+    "at": "2021-04-02T09:46:35.013307426+02:00"
+  },
+  "_updated": {
+    "at": "2021-04-02T09:46:35.013307426+02:00"
+  },
+  "content": "root file\n    second line\n        third line\n"
+}

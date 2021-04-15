@@ -52,8 +52,13 @@ func UnpublishPage(encodedPublishedPagePath string) (errorResp *net.NxfsResponse
 	suffixedPage := addPageSuffix(decodedPath)
 	publishedPageFullPath := nxfsfiles.RelativizeToPublishedPageFolder(suffixedPage)
 
-	if _, implResponse := nxfsfiles.GetFileInfoIfPathExistOrErrorResponse(publishedPageFullPath); nil != implResponse {
-		return implResponse
+	var fileInfo os.FileInfo
+	if fileInfo, errResponse = nxfsfiles.GetFileInfoIfPathExistOrErrorResponse(publishedPageFullPath); nil != errResponse {
+		return errResponse
+	}
+
+	if fileInfo.IsDir() {
+		return helper.ErrorResponse(http.StatusUnprocessableEntity, "cannot_unpublish_dir", "The received path corresponds to a directory, only pages can be unpublished")
 	}
 
 	if implResponse := nxfsfiles.DeleteFile(publishedPageFullPath); implResponse != nil {
