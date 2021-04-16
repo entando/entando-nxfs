@@ -14,6 +14,7 @@ import (
 	nxsiteman "github.com/entando/entando-nxfs/server"
 	"github.com/entando/entando-nxfs/server/model"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -82,10 +83,13 @@ func (c *DefaultApiController) ApiNxfsBrowseEncodedPathGet(w http.ResponseWriter
 		return
 	}
 
-	publishedPages, err := nxsiteman.ParseBoolParameter(query.Get("publishedpages"))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	var publishedPages bool
+	if query.Get("publishedpages") != "" {
+		publishedPages, err = strconv.ParseBool(query.Get("publishedpages"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	result, err := c.service.ApiNxfsBrowseEncodedPathGet(r.Context(), encodedPath, maxdepth, publishedPages)

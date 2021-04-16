@@ -137,12 +137,3 @@ func ParseInt32Parameter(param string) (int32, error) {
 	}
 	return int32(val), nil
 }
-
-// ParseBoolParameter parses a string parameter to a bool
-func ParseBoolParameter(param string) (bool, error) {
-	val, err := strconv.ParseBool(param)
-	if err != nil {
-		return false, err
-	}
-	return val, nil
-}
