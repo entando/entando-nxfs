@@ -11,13 +11,22 @@ import (
 
 const pageSuffix = ".page"
 
+type PageManager struct {
+	fileManager nxfsfiles.FileManager
+}
+
+// NewPageManager creates a PageManager
+func NewPageManager(fileManager nxfsfiles.FileManager) PageManager {
+	return PageManager{fileManager}
+}
+
 // PublishPage - publish the received draft page and return an error NxfsResponse if an error occurs, nil otherwise
-func PublishPage(encodedDraftPagePath string) (errorResp *net.NxfsResponse) {
+func (pm *PageManager) PublishPage(encodedDraftPagePath string) (errorResp *net.NxfsResponse) {
 
 	var pageFileInfo os.FileInfo
 
 	// decode path
-	decodedPath, errResponse := nxfsfiles.DecodePath(encodedDraftPagePath)
+	decodedPath, errResponse := pm.fileManager.DecodePath(encodedDraftPagePath)
 	if errResponse != nil {
 		return errResponse
 	}
@@ -25,7 +34,7 @@ func PublishPage(encodedDraftPagePath string) (errorResp *net.NxfsResponse) {
 	suffixedPage := addPageSuffix(decodedPath)
 
 	// check if file exist as draft in the correct folder or error
-	pageFileInfo, errResponse = nxfsfiles.GetDraftPageInfoIfExistOrErrorResponse(suffixedPage)
+	pageFileInfo, errResponse = pm.fileManager.GetDraftPageInfoIfExistOrErrorResponse(suffixedPage)
 	if errResponse != nil {
 		return errResponse
 	}
@@ -35,28 +44,33 @@ func PublishPage(encodedDraftPagePath string) (errorResp *net.NxfsResponse) {
 		return helper.ErrorResponse(http.StatusUnprocessableEntity, "cannot_publish_dir", "The received path corresponds to a directory, only pages can be published")
 	}
 
-	draftPageFullPath := nxfsfiles.RelativizeToDraftPageFolder(suffixedPage)
-	publishedPageFullPath := nxfsfiles.RelativizeToDraftPageFolder(suffixedPage)
-	return nxfsfiles.CopyFileTo(draftPageFullPath, publishedPageFullPath)
+	draftPageFullPath := pm.fileManager.RelativizeToDraftPageFolder(suffixedPage)
+	publishedPageFullPath := pm.fileManager.RelativizeToPublishedPageFolder(suffixedPage)
+	return pm.fileManager.CopyFileTo(draftPageFullPath, publishedPageFullPath)
 }
 
 // UnpublishPage - unpublish the received published page and return an error NxfsResponse if an error occurs, nil otherwise
-func UnpublishPage(encodedPublishedPagePath string) (errorResp *net.NxfsResponse) {
+func (pm *PageManager) UnpublishPage(encodedPublishedPagePath string) (errorResp *net.NxfsResponse) {
 
 	// decode path
-	decodedPath, errResponse := nxfsfiles.DecodePath(encodedPublishedPagePath)
+	decodedPath, errResponse := pm.fileManager.DecodePath(encodedPublishedPagePath)
 	if errResponse != nil {
 		return errResponse
 	}
 
 	suffixedPage := addPageSuffix(decodedPath)
-	publishedPageFullPath := nxfsfiles.RelativizeToPublishedPageFolder(suffixedPage)
+	publishedPageFullPath := pm.fileManager.RelativizeToPublishedPageFolder(suffixedPage)
 
-	if _, implResponse := nxfsfiles.GetFileInfoIfPathExistOrErrorResponse(publishedPageFullPath); nil != implResponse {
-		return implResponse
+	var fileInfo os.FileInfo
+	if fileInfo, errResponse = pm.fileManager.GetFileInfoIfPathExistOrErrorResponse(publishedPageFullPath); nil != errResponse {
+		return errResponse
 	}
 
-	if implResponse := nxfsfiles.DeleteFile(publishedPageFullPath); implResponse != nil {
+	if fileInfo.IsDir() {
+		return helper.ErrorResponse(http.StatusUnprocessableEntity, "cannot_unpublish_dir", "The received path corresponds to a directory, only pages can be unpublished")
+	}
+
+	if implResponse := pm.fileManager.DeleteFile(publishedPageFullPath); implResponse != nil {
 		return implResponse
 	}
 

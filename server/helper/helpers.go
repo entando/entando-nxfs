@@ -17,9 +17,9 @@ import (
 )
 
 const envVarBrowsableFs = "BROWSABLE_FS"
-const fsBaseDir = "./browsableFS"
-const publishedPagesRelativePath = "pages"
-const draftPagesRelativePath = "draft_pages"
+const FsBaseDir = "./browsableFS"
+const publishedPagesRelativePath = "pub_pages"
+const draftPagesRelativePath = "pages"
 
 var browsableFsPath = ""
 
@@ -38,7 +38,7 @@ func GetBrowsableFsRootPath() string {
 	if "" == browsableFsPath {
 		browsableFsPath = os.Getenv(envVarBrowsableFs)
 		if "" == browsableFsPath {
-			browsableFsPath = fsBaseDir
+			browsableFsPath = FsBaseDir
 		}
 	}
 	return browsableFsPath

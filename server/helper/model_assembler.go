@@ -8,8 +8,19 @@ import (
 	"path/filepath"
 )
 
+type BrowsableFsRootPathGetter func() string
+
+type ModelAssembler struct {
+	browsableFsRootPathGetter BrowsableFsRootPathGetter
+}
+
+// NewModelAssembler creates a ModelAssembler
+func NewModelAssembler(browsableFsRootPathGetter BrowsableFsRootPathGetter) ModelAssembler {
+	return ModelAssembler{browsableFsRootPathGetter}
+}
+
 // ToDirectoryObject - create and return a DirectoryObject starting by the received path and FileInfo
-func ToDirectoryObject(path string, fileInfo os.FileInfo) model.DirectoryObject {
+func (m *ModelAssembler) ToDirectoryObject(path string, fileInfo os.FileInfo) model.DirectoryObject {
 
 	if fileInfo == nil {
 		return model.DirectoryObject{}
@@ -20,7 +31,7 @@ func ToDirectoryObject(path string, fileInfo os.FileInfo) model.DirectoryObject 
 		objectType = model.D
 	}
 
-	rel, err := filepath.Rel(GetBrowsableFsRootPath(), path)
+	rel, err := filepath.Rel(m.browsableFsRootPathGetter(), path)
 	if err != nil {
 		panic("Error during relativization of the file " + fileInfo.Name())
 	}
@@ -36,30 +47,45 @@ func ToDirectoryObject(path string, fileInfo os.FileInfo) model.DirectoryObject 
 }
 
 // ToDirectoryObjectFromFilePath - create and return a DirectoryObject starting by the received path
-func ToDirectoryObjectFromFilePath(filePath string) model.DirectoryObject {
+func (m *ModelAssembler) ToDirectoryObjectFromFilePath(filePath string) model.DirectoryObject {
 
 	var fileInfo os.FileInfo
 	var err error
 
 	if fileInfo, err = os.Stat(filePath); os.IsNotExist(err) {
-		panic(err.Error())
+		return model.DirectoryObject{}
 	}
 
 	fullPath := path.Dir(filePath)
 
-	return ToDirectoryObject(fullPath, fileInfo)
+	return m.ToDirectoryObject(fullPath, fileInfo)
+}
+
+// ToFileObjectFromFilePath - create and return a FileObject starting by the received path
+func (m *ModelAssembler) ToFileObjectFromFilePath(filePath string, content string) model.FileObject {
+
+	var fileInfo os.FileInfo
+	var err error
+
+	if fileInfo, err = os.Stat(filePath); os.IsNotExist(err) {
+		return model.FileObject{}
+	}
+
+	fullPath := path.Dir(filePath)
+
+	return m.ToFileObject(fullPath, fileInfo, content)
 }
 
 // ToFileObject - create and return a FileObject starting by the received path and FileInfo
-func ToFileObject(path string, fileInfo os.FileInfo, fileContentString string) model.FileObject {
+func (m *ModelAssembler) ToFileObject(path string, fileInfo os.FileInfo, fileContentString string) model.FileObject {
 
 	if fileInfo == nil {
 		return model.FileObject{}
 	}
 
-	rel, err := filepath.Rel(GetBrowsableFsRootPath(), path)
+	rel, err := filepath.Rel(m.browsableFsRootPathGetter(), path)
 	if err != nil {
-		panic("Error during relativization of the file " + fileInfo.Name())
+		return model.FileObject{}
 	}
 
 	return model.FileObject{

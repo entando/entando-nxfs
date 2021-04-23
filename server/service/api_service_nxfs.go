@@ -29,19 +29,30 @@ import (
 // This service should implement the business logic for every endpoint for the DefaultApi API.
 // Include any external packages or services that will be required by this service.
 type DefaultApiService struct {
+	modelAssembler helper.ModelAssembler
+	fileManager    nxfsfiles.FileManager
+	pageManager    nxfspages.PageManager
 }
 
 // NewDefaultApiService creates a default api service
 func NewDefaultApiService() controller.DefaultApiServicer {
-	return &DefaultApiService{}
+
+	modelAssembler := helper.NewModelAssembler(helper.GetBrowsableFsRootPath)
+	fileManager := nxfsfiles.NewFileManager(modelAssembler)
+
+	return &DefaultApiService{
+		modelAssembler: modelAssembler,
+		fileManager:    fileManager,
+		pageManager:    nxfspages.NewPageManager(fileManager),
+	}
 }
 
 // ApiNxfsBrowseEncodedPathGet - Gets the list of objects in a directory
-func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32) (net.NxfsResponse, error) {
+func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, encodedPath string, maxdepth int32, publishedPages bool) (net.NxfsResponse, error) {
 
-	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, encodedPath, func(pathToBrowse string, fileInfoToBrowse os.FileInfo) (net.NxfsResponse, error) {
+	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, s.fileManager, encodedPath, func(pathToBrowse string, fileInfoToBrowse os.FileInfo) (net.NxfsResponse, error) {
 		// recursive function
-		dirObjectArray, err := nxfsfiles.BrowseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []model.DirectoryObject{})
+		dirObjectArray, err := s.fileManager.BrowseFileTree(pathToBrowse, fileInfoToBrowse, 0, maxdepth, []model.DirectoryObject{}, publishedPages)
 		if err != nil {
 			return *helper.ErrorResponse(http.StatusInternalServerError, "dir_listing_err", err.Error()), nil
 		}
@@ -53,7 +64,7 @@ func (s *DefaultApiService) ApiNxfsBrowseEncodedPathGet(ctx context.Context, enc
 // ApiNxfsObjectsEncodedPathDelete - Deletes an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context, encodedPath string) (net.NxfsResponse, error) {
 
-	pathToDelete, fileToDelete, errorResponse := nxfsfiles.ComposeFullPathOrErrorResponse(encodedPath)
+	pathToDelete, fileToDelete, errorResponse := s.fileManager.ComposeFullPathOrErrorResponse(encodedPath)
 	if errorResponse != nil {
 		if errorResponse.Code == http.StatusNotFound {
 			return helper.SuccessResponse(http.StatusNoContent, nil), nil
@@ -63,11 +74,11 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context,
 	}
 	absPathFile := path.Join(pathToDelete, fileToDelete.Name())
 
-	if nxfsfiles.IsDirWithChildren(absPathFile, fileToDelete) {
+	if s.fileManager.IsDirWithChildren(absPathFile, fileToDelete) {
 		return *helper.ErrorResponse(http.StatusUnprocessableEntity, "dir_not_empty", "The folder to delete is not empty"), nil
 	}
 
-	if errorResponse = nxfsfiles.DeleteFile(absPathFile); errorResponse != nil {
+	if errorResponse = s.fileManager.DeleteFile(absPathFile); errorResponse != nil {
 		return *errorResponse, nil
 	}
 
@@ -77,7 +88,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathDelete(ctx context.Context,
 // ApiNxfsObjectsEncodedPathGet - Gets an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, encodedPath string) (net.NxfsResponse, error) {
 
-	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, encodedPath, func(pathToBrowse string, requestedFile os.FileInfo) (net.NxfsResponse, error) {
+	return composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx, s.fileManager, encodedPath, func(pathToBrowse string, requestedFile os.FileInfo) (net.NxfsResponse, error) {
 		// if dir return error
 		if requestedFile.IsDir() {
 			return *helper.ErrorResponse(http.StatusBadRequest, "dir_requested", "The received encoded path "+
@@ -94,7 +105,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathGet(ctx context.Context, en
 		// Convert []byte to string and print to screen
 		fileContentString := string(fileContent)
 
-		return helper.SuccessResponse(http.StatusOK, helper.ToFileObject(pathToBrowse, requestedFile, fileContentString)), nil
+		return helper.SuccessResponse(http.StatusOK, s.modelAssembler.ToFileObject(pathToBrowse, requestedFile, fileContentString)), nil
 	})
 }
 
@@ -109,7 +120,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 		return *helper.ErrorResponse(http.StatusBadRequest, "empty_content", "A file with empty content can't be saved"), nil
 	}
 
-	decodedPath, decodeErrResp := nxfsfiles.DecodePath(encodedPath)
+	decodedPath, decodeErrResp := s.fileManager.DecodePath(encodedPath)
 	if decodeErrResp != nil {
 		return *decodeErrResp, nil
 	}
@@ -118,22 +129,24 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPut(ctx context.Context, en
 
 	var creationErrResp *net.NxfsResponse
 	if fileObject.Type == model.D {
-		creationErrResp = nxfsfiles.CreateDirectory(fullPathToSave)
+		creationErrResp = s.fileManager.CreateDirectory(fullPathToSave)
 	} else {
-		creationErrResp = nxfsfiles.CreateFile(fullPathToSave, fileObject)
+		creationErrResp = s.fileManager.CreateFile(fullPathToSave, fileObject)
 	}
 
 	if creationErrResp != nil {
 		return *creationErrResp, nil
+	} else if fileObject.Type == model.D {
+		return helper.SuccessResponse(http.StatusCreated, s.modelAssembler.ToDirectoryObjectFromFilePath(fullPathToSave)), nil
 	} else {
-		return helper.SuccessResponse(http.StatusCreated, helper.ToDirectoryObjectFromFilePath(fullPathToSave)), nil
+		return helper.SuccessResponse(http.StatusCreated, s.modelAssembler.ToFileObjectFromFilePath(fullPathToSave, fileObject.Content)), nil
 	}
 }
 
 // ApiNxfsObjectsEncodedPathPublishPost - Publishes an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Context, encodedPath string) (net.NxfsResponse, error) {
 
-	if errorResponse := nxfspages.PublishPage(encodedPath); errorResponse != nil {
+	if errorResponse := s.pageManager.PublishPage(encodedPath); errorResponse != nil {
 		return *errorResponse, nil
 	} else {
 		return helper.SuccessResponse(http.StatusOK, nil), nil
@@ -143,7 +156,7 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathPublishPost(ctx context.Con
 // ApiNxfsObjectsEncodedPathUnpublishPost - Publishes an object
 func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPost(ctx context.Context, encodedPath string) (net.NxfsResponse, error) {
 
-	if errorResponse := nxfspages.UnpublishPage(encodedPath); errorResponse != nil {
+	if errorResponse := s.pageManager.UnpublishPage(encodedPath); errorResponse != nil {
 		return *errorResponse, nil
 	} else {
 		return helper.SuccessResponse(http.StatusOK, nil), nil
@@ -151,9 +164,9 @@ func (s *DefaultApiService) ApiNxfsObjectsEncodedPathUnpublishPost(ctx context.C
 }
 
 // DecodedPathAndExecuteApiNxfsFunction - decode the received encodedPath and execute the fnWithDecodedPath function passing it the result of the decoding
-func composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx context.Context, encodedPath string, fnWithDecodedPath apiNxfsFunctionWithComposeFullPathOrError) (net.NxfsResponse, error) {
+func composeFullPathOrErrorAndExecuteApiNxfsFunction(ctx context.Context, fileManager nxfsfiles.FileManager, encodedPath string, fnWithDecodedPath apiNxfsFunctionWithComposeFullPathOrError) (net.NxfsResponse, error) {
 
-	pathToBrowse, fileInfoToBrowse, errorResponse := nxfsfiles.ComposeFullPathOrErrorResponse(encodedPath)
+	pathToBrowse, fileInfoToBrowse, errorResponse := fileManager.ComposeFullPathOrErrorResponse(encodedPath)
 	if errorResponse != nil {
 		return *errorResponse, nil
 	}

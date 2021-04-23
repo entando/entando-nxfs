@@ -11,9 +11,10 @@ package controller
 
 import (
 	"encoding/json"
-	"github.com/entando/entando-nxfs/server"
+	nxsiteman "github.com/entando/entando-nxfs/server"
 	"github.com/entando/entando-nxfs/server/model"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -82,7 +83,16 @@ func (c *DefaultApiController) ApiNxfsBrowseEncodedPathGet(w http.ResponseWriter
 		return
 	}
 
-	result, err := c.service.ApiNxfsBrowseEncodedPathGet(r.Context(), encodedPath, maxdepth)
+	var publishedPages bool
+	if query.Get("publishedpages") != "" {
+		publishedPages, err = strconv.ParseBool(query.Get("publishedpages"))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	result, err := c.service.ApiNxfsBrowseEncodedPathGet(r.Context(), encodedPath, maxdepth, publishedPages)
 	//If an error occured, encode the error with the status code
 	if err != nil {
 		nxsiteman.EncodeJSONResponse(err.Error(), &result.Code, w)
